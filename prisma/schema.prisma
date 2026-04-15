@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  password     String
+  profileImage String?
+  digitalLevel String?
+  role         String  @default("user")
+  theme        String  @default("light")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analyses     Analysis[]
+  reports      Report[]
+  messages     ChatbotMessage[]
+  transactions Transaction[]
+}
+
+model Transaction {
+  id     String            @id @default(uuid())
+  userId String
+  amount Float
+  ip     String
+  status TransactionStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Analysis {
+  id         String          @id @default(uuid())
+  userId     String
+  type       AnalysisType
+  content    String
+  sourceUrl  String?
+  result     AnalysisResult?
+  confidence Float?
+  aiResponse String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  models  AnalysisModel[]
+  reports Report[]
+  tags    AnalysisTag[]
+
+  @@index([userId])
+}
+
+model AIModel {
+  id      String  @id @default(uuid())
+  name    String?
+  version String?
+  type    String?
+
+  createdAt DateTime @default(now())
+
+  analyses AnalysisModel[]
+}
+
+model AnalysisModel {
+  id         String @id @default(uuid())
+  analysisId String
+  modelId    String
+
+  processedAt DateTime @default(now())
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  model    AIModel  @relation(fields: [modelId], references: [id])
+}
+
+model Report {
+  id         String  @id @default(uuid())
+  userId     String?
+  analysisId String?
+  reason     String?
+
+  createdAt DateTime @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id])
+  analysis Analysis? @relation(fields: [analysisId], references: [id])
+}
+
+model ChatbotMessage {
+  id       String @id @default(uuid())
+  userId   String
+  message  String
+  response String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Statistic {
+  id               String @id @default(uuid())
+  totalAnalyses    Int    @default(0)
+  fakeNewsDetected Int    @default(0)
+  scamsDetected    Int    @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id   String @id @default(uuid())
+  name String @unique
+
+  analyses AnalysisTag[]
+}
+
+model AnalysisTag {
+  id         String @id @default(uuid())
+  analysisId String
+  tagId      String
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+}
+
+enum AnalysisType {
+  FAKE_NEWS
+  SCAM
+}
+
+enum TransactionStatus {
+  APPROVED
+  REJECTED
+  ANALYSIS
+}
+
+enum AnalysisResult {
+  TRUE
+  FALSE
+  SUSPECT
+}
