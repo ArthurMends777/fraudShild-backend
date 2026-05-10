@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { healthCheck } from '../controllers/healthController';
 import { registerController, loginController } from '../controllers/authController';
+import { authenticate } from '../middlewares/auth';
 
 const router = Router();
 
