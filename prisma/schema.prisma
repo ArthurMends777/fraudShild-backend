@@ -136,8 +136,9 @@ model AnalysisTag {
 }
 
 enum AnalysisType {
-  FAKE_NEWS
-  SCAM
+  TEXT
+  URL
+  IMAGE
 }
 
 enum TransactionStatus {
