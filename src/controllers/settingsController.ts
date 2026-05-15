@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getProfile, updateProfile, changePassword, updatePreferences } from '../services/settingsService';
- 
+
 export const getProfileController = async (req: Request, res: Response) => {
   try {
     return res.status(200).json(await getProfile(req.user!.id));
@@ -8,7 +8,7 @@ export const getProfileController = async (req: Request, res: Response) => {
     return res.status(404).json({ error: error.message });
   }
 };
- 
+
 export const updateProfileController = async (req: Request, res: Response) => {
   try {
     const { name, profileImage, digitalLevel } = req.body;
@@ -18,7 +18,7 @@ export const updateProfileController = async (req: Request, res: Response) => {
     return res.status(400).json({ error: error.message });
   }
 };
- 
+  
 export const changePasswordController = async (req: Request, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -31,11 +31,17 @@ export const changePasswordController = async (req: Request, res: Response) => {
     return res.status(400).json({ error: error.message });
   }
 };
- 
+
 export const updatePreferencesController = async (req: Request, res: Response) => {
   try {
-    const { theme } = req.body;
-    const user = await updatePreferences(req.user!.id, { theme });
+    const { theme, notifEmail, notifAnalysis, notifSecurity, notifNewsletter } = req.body;
+    const user = await updatePreferences(req.user!.id, {
+      theme,
+      notifEmail,
+      notifAnalysis,
+      notifSecurity,
+      notifNewsletter,
+    });
     return res.status(200).json(user);
   } catch (error: any) {
     return res.status(400).json({ error: error.message });

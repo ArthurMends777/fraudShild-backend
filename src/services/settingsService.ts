@@ -7,6 +7,7 @@ export const getProfile = async (userId: string) => {
     select: {
       id: true, name: true, email: true,
       profileImage: true, digitalLevel: true, theme: true, role: true,
+      notifEmail: true, notifAnalysis: true, notifSecurity: true, notifNewsletter: true,
     },
   });
   if (!user) throw new Error('Usuário não encontrado');
@@ -20,7 +21,10 @@ export const updateProfile = async (
   return prisma.user.update({
     where: { id: userId },
     data,
-    select: { id: true, name: true, email: true, profileImage: true, digitalLevel: true, theme: true },
+    select: {
+      id: true, name: true, email: true,
+      profileImage: true, digitalLevel: true, theme: true,
+    },
   });
 };
 
@@ -43,7 +47,13 @@ export const changePassword = async (
 
 export const updatePreferences = async (
   userId: string,
-  data: { theme?: 'light' | 'dark' }
+  data: {
+    theme?: 'light' | 'dark';
+    notifEmail?: boolean;
+    notifAnalysis?: boolean;
+    notifSecurity?: boolean;
+    notifNewsletter?: boolean;
+  }
 ) => {
   const VALID_THEMES = ['light', 'dark'];
   if (data.theme && !VALID_THEMES.includes(data.theme)) {
@@ -53,6 +63,9 @@ export const updatePreferences = async (
   return prisma.user.update({
     where: { id: userId },
     data,
-    select: { id: true, theme: true },
+    select: {
+      id: true, theme: true,
+      notifEmail: true, notifAnalysis: true, notifSecurity: true, notifNewsletter: true,
+    },
   });
 };

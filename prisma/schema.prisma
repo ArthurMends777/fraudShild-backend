@@ -15,9 +15,15 @@ model User {
   profileImage String?
   digitalLevel String?
   role         String  @default("user")
-  theme        String  @default("light")
+  theme        String  @default("dark")
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
+
+  // Preferências de notificação
+  notifEmail        Boolean @default(true)
+  notifAnalysis     Boolean @default(true)
+  notifSecurity     Boolean @default(true)
+  notifNewsletter   Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
