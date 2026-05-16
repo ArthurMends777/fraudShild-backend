@@ -20,6 +20,10 @@ import {
   updatePreferencesController,
 } from '../controllers/settingsController';
  
+import { uploadAvatar } from '../middlewares/upload';
+import { uploadAvatarController, handleUploadError } from '../controllers/uploadController';
+import path from 'path';
+
 import { analisar } from '../controllers/analiseController';
 
 const router = Router();
@@ -44,6 +48,7 @@ router.get('/settings/profile',          authenticate, getProfileController);
 router.put('/settings/profile',          authenticate, updateProfileController);
 router.put('/settings/password',         authenticate, changePasswordController);
 router.put('/settings/preferences',      authenticate, updatePreferencesController);
+router.post('/settings/avatar',          authenticate, uploadAvatar.single('avatar'), handleUploadError, uploadAvatarController);
  
 router.get('/admin/stats',               authenticate, authorizeAdmin, adminStatsController);
 router.get('/admin/users',               authenticate, authorizeAdmin, getUsersController);
