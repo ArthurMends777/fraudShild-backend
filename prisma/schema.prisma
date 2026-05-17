@@ -28,10 +28,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  analyses     Analysis[]
-  reports      Report[]
-  messages     ChatbotMessage[]
-  transactions Transaction[]
+  analyses         Analysis[]
+  reports          Report[]
+  messages         ChatbotMessage[]
+  transactions     Transaction[]
+  simulatorSessions SimulatorSession[]
 }
 
 model Transaction {
@@ -157,4 +158,54 @@ enum AnalysisResult {
   TRUE
   FALSE
   SUSPECT
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Scenario {
+  id          String          @id @default(uuid())
+  title       String
+  content     String
+  category    String
+  isScam      Boolean
+  explanation String
+  difficulty  DifficultyLevel @default(BEGINNER)
+  active      Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+
+  answers SimulatorAnswer[]
+}
+
+model SimulatorSession {
+  id          String   @id @default(uuid())
+  userId      String
+  completedAt DateTime?
+  expiresAt   DateTime
+  score       Int       @default(0)
+  total       Int       @default(0)
+
+  createdAt DateTime @default(now())
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers SimulatorAnswer[]
+
+  @@index([userId])
+}
+
+model SimulatorAnswer {
+  id         String  @id @default(uuid())
+  sessionId  String
+  scenarioId String
+  userAnswer Boolean
+  correct    Boolean
+
+  answeredAt DateTime @default(now())
+
+  session  SimulatorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  scenario Scenario         @relation(fields: [scenarioId], references: [id])
 }
