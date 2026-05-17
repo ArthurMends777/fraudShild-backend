@@ -6,7 +6,7 @@ import { forgotPasswordController, resetPasswordController } from '../controller
 
 import { dashboardController } from '../controllers/dashboardController';
 import { historyController, clearHistoryController } from '../controllers/historyController';
-import { getScenariosController, checkAnswerController } from '../controllers/simulatorController';
+import { startSessionController, statsController, answerController } from '../controllers/simulatorController';
 import {
   adminStatsController,
   getUsersController,
@@ -41,8 +41,9 @@ router.get('/dashboard', authenticate, dashboardController);
 router.get('/history',        authenticate, historyController);
 router.delete('/history',     authenticate, clearHistoryController);
  
-router.get('/simulator/scenarios',  getScenariosController);
-router.post('/simulator/check',     checkAnswerController);
+router.get('/simulator',                authenticate, startSessionController);
+router.post('/simulator/answer',        authenticate, answerController);
+router.get('/simulator/stats',          authenticate, statsController);
  
 router.get('/settings/profile',          authenticate, getProfileController);
 router.put('/settings/profile',          authenticate, updateProfileController);
@@ -56,4 +57,6 @@ router.put('/admin/users/:id/role',      authenticate, authorizeAdmin, updateUse
 router.delete('/admin/users/:id',        authenticate, authorizeAdmin, deleteUserController);
 
 router.post('/analisar',        authenticate, analisar);
+
+
 export default router;

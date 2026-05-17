@@ -1,112 +1,185 @@
-// por ora são estáticos
+import { prisma } from '../lib/prisma';
+import { DifficultyLevel } from '@prisma/client';
 
-export interface Scenario {
-  id:          number;
-  category:    string;
-  content:     string;
-  isThreat:    boolean;
-  explanation: string;
-  tips:        string[];
-}
+const QUESTIONS_PER_SESSION = 5;
+const COOLDOWN_DAYS = 4;
 
-export const SCENARIOS: Scenario[] = [
-  {
-    id: 1,
-    category: 'PHISHING',
-    content:
-      'Prezado cliente, detectamos uma atividade suspeita em sua conta. Para evitar o bloqueio, atualize seus dados clicando no link: http://banco-seguro.xyz/atualizar. Você tem 24 horas para resolver.',
-    isThreat: true,
-    explanation:
-      'Este é um golpe de phishing clássico: usa urgência ("24 horas"), domínio falso ("banco-seguro.xyz") e pede dados pessoais.',
-    tips: [
-      'Bancos nunca pedem atualização de dados por link em mensagem.',
-      'Verifique sempre o domínio oficial da instituição.',
-      'Desconfie de mensagens com tom de urgência.',
-    ],
-  },
-  {
-    id: 2,
-    category: 'FAKE NEWS',
-    content:
-      'URGENTE: Novo vírus transmitido por 5G está matando pessoas! Compartilhe antes que censurem!',
-    isThreat: true,
-    explanation:
-      'Fake news com marcadores clássicos: palavra "URGENTE", teoria conspiratória sem fonte e apelo emocional ao compartilhamento.',
-    tips: [
-      'Busque a informação em veículos de comunicação reconhecidos.',
-      'Desconfie de notícias sem fonte ou autoria.',
-      'O pedido de "compartilhe antes que censurem" é sinal de desinformação.',
-    ],
-  },
-  {
-    id: 3,
-    category: 'GOLPE PIX',
-    content:
-      'Olá! Sou da central do seu banco. Identificamos uma transferência suspeita de R$1.500 na sua conta. Para cancelar, me informe seu token de segurança.',
-    isThreat: true,
-    explanation:
-      'Golpe do falso suporte bancário: solicita token/senha por mensagem, o que bancos legítimos nunca fazem.',
-    tips: [
-      'Nunca forneça token ou senha por telefone ou mensagem.',
-      'Ligue diretamente para o número oficial do seu banco.',
-      'Bancos não pedem cancelamento de transações via chat.',
-    ],
-  },
-  {
-    id: 4,
-    category: 'CONFIÁVEL',
-    content:
-      'O Ministério da Saúde divulgou hoje o calendário de vacinação 2026. Acesse o site oficial gov.br/saude para consultar as datas.',
-    isThreat: false,
-    explanation:
-      'Conteúdo legítimo: fonte oficial identificada (gov.br), sem urgência artificial e sem solicitação de dados.',
-    tips: [
-      'Sites gov.br são fontes oficiais do governo brasileiro.',
-      'Conteúdo confiável cita a fonte de forma verificável.',
-    ],
-  },
-  {
-    id: 5,
-    category: 'ENGENHARIA SOCIAL',
-    content:
-      'Parabéns! Você foi selecionado para ganhar um iPhone 15. Clique aqui e preencha seus dados para receber o prêmio: http://premios-gratis.net/iphone',
-    isThreat: true,
-    explanation:
-      'Golpe de prêmio falso: oferta irreal, domínio suspeito e coleta de dados pessoais são os sinais típicos.',
-    tips: [
-      'Ninguém ganha prêmios sem participar de um sorteio.',
-      'Domínios como "premios-gratis.net" não são empresas reais.',
-      'Nunca preencha dados pessoais em links recebidos por mensagem.',
-    ],
-  },
-  {
-    id: 6,
-    category: 'SPAM',
-    content:
-      'Ganhe R$5.000 por semana trabalhando de casa! Sem experiência necessária. Vagas limitadas. Responda JÁ!',
-    isThreat: true,
-    explanation:
-      'Oferta de emprego fraudulenta: promessa de ganho irreal, urgência ("JÁ!") e ausência de qualquer informação sobre a empresa.',
-    tips: [
-      'Propostas legítimas de emprego têm CNPJ, site e processo seletivo.',
-      'Renda garantida sem esforço é sempre golpe.',
-      'Pesquise a empresa antes de responder qualquer proposta.',
-    ],
-  },
-];
+const mapDifficulty = (digitalLevel?: string | null): DifficultyLevel => {
+  switch (digitalLevel?.toLowerCase()) {
+    case 'avancado':
+    case 'advanced':  return 'ADVANCED';
+    case 'intermediario':
+    case 'intermediate': return 'INTERMEDIATE';
+    default:          return 'BEGINNER';
+  }
+};
 
-export const getScenarios = () =>
-  SCENARIOS.map(({ id, category, content }) => ({ id, category, content }));
+export const getOrCreateSession = async (userId: string) => {
+  const lastSession = await prisma.simulatorSession.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { answers: true },
+  });
 
-export const checkAnswer = (scenarioId: number, userAnswer: boolean) => {
-  const scenario = SCENARIOS.find((s) => s.id === scenarioId);
+  const now = new Date();
+
+  if (lastSession && !lastSession.completedAt) {
+    return { session: lastSession, isNew: false };
+  }
+
+  if (lastSession?.completedAt && lastSession.expiresAt > now) {
+    const diffMs = lastSession.expiresAt.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    throw new Error(`COOLDOWN:${diffDays}`); 
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { digitalLevel: true },
+  });
+
+  const difficulty = mapDifficulty(user?.digitalLevel);
+
+  let scenarios = await prisma.scenario.findMany({
+    where: { active: true, difficulty },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (scenarios.length < QUESTIONS_PER_SESSION) {
+    const others = await prisma.scenario.findMany({
+      where: { active: true, difficulty: { not: difficulty } },
+      orderBy: { createdAt: 'asc' },
+      take: QUESTIONS_PER_SESSION - scenarios.length,
+    });
+    scenarios = [...scenarios, ...others];
+  }
+
+  if (scenarios.length === 0) {
+    throw new Error('Nenhum cenário disponível');
+  }
+
+  const shuffled = scenarios.sort(() => Math.random() - 0.5).slice(0, QUESTIONS_PER_SESSION);
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + COOLDOWN_DAYS);
+
+  const session = await prisma.simulatorSession.create({
+    data: {
+      userId,
+      expiresAt,
+      total: shuffled.length,
+    },
+    include: { answers: true },
+  });
+
+  return { session, scenarios: shuffled, isNew: true };
+};
+
+export const getSessionScenarios = async (sessionId: string, userId: string) => {
+  const session = await prisma.simulatorSession.findFirst({
+    where: { id: sessionId, userId },
+    include: {
+      answers: {
+        include: { scenario: true },
+      },
+    },
+  });
+
+  if (!session) throw new Error('Sessão não encontrada');
+
+  return session;
+};
+
+export const submitAnswer = async (
+  sessionId: string,
+  userId: string,
+  scenarioId: string,
+  userAnswer: boolean
+) => {
+  const session = await prisma.simulatorSession.findFirst({
+    where: { id: sessionId, userId },
+    include: { answers: true },
+  });
+
+  if (!session) throw new Error('Sessão não encontrada');
+  if (session.completedAt) throw new Error('Sessão já finalizada');
+
+  const alreadyAnswered = session.answers.find(a => a.scenarioId === scenarioId);
+  if (alreadyAnswered) throw new Error('Cenário já respondido');
+
+  const scenario = await prisma.scenario.findUnique({ where: { id: scenarioId } });
   if (!scenario) throw new Error('Cenário não encontrado');
 
-  const correct = userAnswer === scenario.isThreat;
+  const correct = userAnswer === scenario.isScam;
+
+  await prisma.simulatorAnswer.create({
+    data: { sessionId, scenarioId, userAnswer, correct },
+  });
+
+  const updatedAnswers = session.answers.length + 1;
+  const newScore = session.score + (correct ? 1 : 0);
+
+  if (updatedAnswers >= session.total) {
+    await prisma.simulatorSession.update({
+      where: { id: sessionId },
+      data: { completedAt: new Date(), score: newScore },
+    });
+
+    const percentage = newScore / session.total;
+    let newLevel: string | null = null;
+    if (percentage >= 0.8) newLevel = 'advanced';
+    else if (percentage >= 0.5) newLevel = 'intermediate';
+    else newLevel = 'beginner';
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { digitalLevel: newLevel },
+    });
+  } else {
+    await prisma.simulatorSession.update({
+      where: { id: sessionId },
+      data: { score: newScore },
+    });
+  }
+
   return {
     correct,
-    isThreat:    scenario.isThreat,
     explanation: scenario.explanation,
-    tips:        scenario.tips,
+    isScam: scenario.isScam,
+    sessionCompleted: updatedAnswers >= session.total,
+    score: newScore,
+    total: session.total,
+  };
+};
+
+export const getUserSimulatorStats = async (userId: string) => {
+  const sessions = await prisma.simulatorSession.findMany({
+    where: { userId, completedAt: { not: null } },
+    include: { answers: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const lastSession = await prisma.simulatorSession.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const now = new Date();
+  const nextAvailable = lastSession?.completedAt && lastSession.expiresAt > now
+    ? lastSession.expiresAt
+    : null;
+
+  const totalSessions = sessions.length;
+  const totalCorrect = sessions.reduce((acc, s) => acc + s.score, 0);
+  const totalAnswers = sessions.reduce((acc, s) => acc + s.total, 0);
+
+  return {
+    totalSessions,
+    totalCorrect,
+    totalAnswers,
+    accuracy: totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0,
+    nextAvailable,
+    lastScore: lastSession?.score ?? null,
+    lastTotal: lastSession?.total ?? null,
   };
 };
