@@ -55,6 +55,5 @@ router.get('/admin/users',               authenticate, authorizeAdmin, getUsersC
 router.put('/admin/users/:id/role',      authenticate, authorizeAdmin, updateUserRoleController);
 router.delete('/admin/users/:id',        authenticate, authorizeAdmin, deleteUserController);
 
-router.post('/analisar', authenticate, analisar);
-router.get('/analisar/health', healthCheck);
+router.post('/analisar',        authenticate, analisar);
 export default router;

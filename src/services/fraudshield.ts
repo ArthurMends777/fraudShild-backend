@@ -4,12 +4,31 @@ export interface Classificacao {
   nivel: "confiavel" | "suspeito" | "alto_risco";
   emoji: string;
   label: string;
+  observacao?: string;
 }
 
 export interface PalavraChave {
   palavra: string;
   tipo: "suspeita" | "neutra" | "confiavel" | "duvida";
   contribuicao: number;
+}
+
+export interface Fonte {
+  titulo: string;
+  url: string;
+  descricao: string;
+  confiavel: boolean;
+  suspeita: boolean;
+}
+
+export interface Evidencias {
+  query_usada: string;
+  encontrou_resultados: boolean;
+  observacao: string;
+  fontes: Fonte[];
+  score_confiabilidade: number;
+  total_resultados: number;
+  erro?: string;
 }
 
 export interface ResultadoAnalise {
@@ -19,6 +38,7 @@ export interface ResultadoAnalise {
   classificacao: Classificacao;
   alertas: string[];
   palavras_chave: PalavraChave[];
+  evidencias: Evidencias;
 }
 
 export async function analisarTexto(
