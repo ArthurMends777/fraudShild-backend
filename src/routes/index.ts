@@ -25,6 +25,7 @@ import { uploadAvatarController, handleUploadError } from '../controllers/upload
 import path from 'path';
 
 import { analisar } from '../controllers/analiseController';
+import { simonController } from '../controllers/simonController';
 
 const router = Router();
 
@@ -58,5 +59,8 @@ router.delete('/admin/users/:id',        authenticate, authorizeAdmin, deleteUse
 
 router.post('/analisar',        authenticate, analisar);
 
+router.post('/simon', authenticate, simonController);
+
+export default router;
 
 export default router;
