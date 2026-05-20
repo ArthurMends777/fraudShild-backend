@@ -22,7 +22,8 @@ import {
  
 import { uploadAvatar } from '../middlewares/upload';
 import { uploadAvatarController, handleUploadError } from '../controllers/uploadController';
-import path from 'path';
+import { seedScenarios } from '../scripts/scenarioSeeder';
+import { DifficultyLevel } from '@prisma/client';
 
 import { analisar } from '../controllers/analiseController';
 import { simonController } from '../controllers/simonController';
@@ -60,5 +61,21 @@ router.delete('/admin/users/:id',        authenticate, authorizeAdmin, deleteUse
 router.post('/analisar',        authenticate, analisar);
 
 router.post('/simon', authenticate, simonController);
+
+router.post('/admin/scenarios/seed', authenticate, authorizeAdmin, async (req, res) => {
+  const { difficulty, category, count = 3 } = req.body;
+  try {
+    const result = await seedScenarios({
+      difficulty: difficulty as DifficultyLevel | undefined,
+      category,
+      countPerCategory: Number(count),
+      verbose: false,
+    });
+    return res.json({ message: 'Seed concluído', ...result });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+ 
 
 export default router;

@@ -184,6 +184,7 @@ model Scenario {
 model SimulatorSession {
   id          String   @id @default(uuid())
   userId      String
+  scenarioIds String[]
   completedAt DateTime?
   expiresAt   DateTime
   score       Int       @default(0)
