@@ -62,5 +62,3 @@ router.post('/analisar',        authenticate, analisar);
 router.post('/simon', authenticate, simonController);
 
 export default router;
-
-export default router;
